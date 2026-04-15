@@ -1,2 +1,3 @@
 # HeyFool
-hahaa
+Trying to automate a tedious process
+
