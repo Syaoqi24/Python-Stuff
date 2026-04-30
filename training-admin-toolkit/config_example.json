@@ -1,0 +1,11 @@
+{
+    "_comment": "Column indices are 1-based (column A = 1, B = 2, ...)",
+    "name_column": 3,
+    "header_row": 2,
+    "data_start": 3,
+    "columns": {
+        "PHOTO": 11,
+        "DIPLOMA": 12,
+        "ID_CARD": 13
+    }
+}

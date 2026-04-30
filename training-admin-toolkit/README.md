@@ -1,0 +1,196 @@
+# Training Admin Toolkit
+
+Two Python command-line tools that automate the most tedious parts of managing vocational training participant data.
+
+Built from real administrative work at a government vocational training centre (BBPVP).
+
+---
+
+## Tools
+
+### 1. `download_from_spreadsheet.py` — Bulk file downloader from Google Drive
+
+Training programmes often collect participant documents (photos, diplomas, ID cards) as Google Drive links embedded inside Excel spreadsheets. Downloading them one by one is slow and error-prone.
+
+This tool reads the spreadsheet, extracts all hyperlinks from the configured columns, and downloads every file into organised subfolders automatically.
+
+**What it handles:**
+- Google Drive share links → converted to direct download URLs automatically
+- Large files that trigger Google's virus-scan confirmation page
+- Filename collisions (appends `(1)`, `(2)`, etc.)
+- Configurable column layout via JSON config file — works with any spreadsheet structure
+- Graceful error handling with `--skip-errors` flag
+
+```
+python download_from_spreadsheet.py --file participants.xlsx --output ./downloads
+```
+
+```
+Output:
+  downloads/
+    PHOTO/
+      Budi_Santoso_FOTO.jpg   (42.3 KB) ✓
+      Siti_Rahayu_FOTO.jpg    (38.1 KB) ✓
+    DIPLOMA/
+      ...
+    ID_CARD/
+      ...
+```
+
+---
+
+### 2. `split_pdf_by_participants.py` — Batch PDF splitter by participant
+
+Training certificates and result sheets are often exported as a single multi-page PDF, one participant per N pages. Splitting them manually is a common bottleneck.
+
+This tool reads a CSV file of participant names and splits the PDF into individual files named `01. Name.pdf`, `02. Name.pdf`, etc.
+
+**What it handles:**
+- Configurable pages per participant (`--pages`)
+- Configurable name column in CSV (`--col`)
+- Optional header row skipping (`--skip-header`)
+- Warns gracefully when pages run out
+
+```
+python split_pdf_by_participants.py \
+  --pdf certificates.pdf \
+  --names participants.csv \
+  --pages 2 \
+  --skip-header \
+  --output ./hasil
+```
+
+```
+Output:
+  ✓  01. Budi Santoso.pdf
+  ✓  02. Siti Rahayu.pdf
+  ✓  03. Ahmad Fauzi.pdf
+  ...
+  Done.  ✓ 30 complete   ⚠ 0 incomplete
+```
+
+---
+
+## Quick start
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/YOUR_USERNAME/training-admin-toolkit.git
+cd training-admin-toolkit
+```
+
+### 2. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Generate sample data to test
+
+```bash
+python generate_sample_data.py
+```
+
+This creates `participants.xlsx`, `participants.csv`, and `config_example.json` with fake demo data.
+
+### 4. Run the downloader
+
+```bash
+python download_from_spreadsheet.py --file participants.xlsx --skip-errors
+```
+
+*(The sample data contains fake Google Drive IDs, so downloads will fail — that is expected. The tool will show the correct output structure and skip errors.)*
+
+### 5. Run the PDF splitter
+
+```bash
+# Replace your.pdf with any real PDF
+python split_pdf_by_participants.py \
+  --pdf your.pdf \
+  --names participants.csv \
+  --pages 2 \
+  --skip-header
+```
+
+---
+
+## Custom column layout
+
+If your spreadsheet has a different structure, create a config JSON file:
+
+```json
+{
+    "name_column": 3,
+    "header_row": 2,
+    "data_start": 3,
+    "columns": {
+        "PHOTO":   11,
+        "DIPLOMA": 12,
+        "ID_CARD": 13
+    }
+}
+```
+
+Then pass it with `--config`:
+
+```bash
+python download_from_spreadsheet.py --file myfile.xlsx --config my_config.json
+```
+
+Column indices are 1-based: A=1, B=2, C=3, and so on.
+
+---
+
+## All options
+
+### `download_from_spreadsheet.py`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--file` / `-f` | `participants.xlsx` | Path to the Excel file |
+| `--output` / `-o` | `./downloads` | Root folder for downloaded files |
+| `--config` / `-c` | *(none)* | Path to JSON column config file |
+| `--delay` | `1.0` | Seconds between downloads (avoids rate-limiting) |
+| `--timeout` | `60` | HTTP timeout per file in seconds |
+| `--skip-errors` | *(off)* | Continue even if some downloads fail |
+
+### `split_pdf_by_participants.py`
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--pdf` / `-p` | *(required)* | Path to the source PDF |
+| `--names` / `-n` | *(required)* | Path to CSV file with participant names |
+| `--pages` | `2` | Pages per participant |
+| `--col` | `1` | Column index (0-based) for names in CSV |
+| `--skip-header` | *(off)* | Skip the first row of the CSV |
+| `--output` / `-o` | `.` (current dir) | Output folder for split PDFs |
+
+---
+
+## Project structure
+
+```
+training-admin-toolkit/
+├── download_from_spreadsheet.py   # Main downloader
+├── split_pdf_by_participants.py   # PDF splitter
+├── generate_sample_data.py        # Creates demo files for testing
+├── config_example.json            # Example column config (generated by above)
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Background
+
+These tools were developed during administrative work managing vocational training programme performance data. The download script reduced file collection time from manual one-by-one downloading to a single command. The PDF splitter eliminated a repetitive manual splitting task that previously took 20–30 minutes per training batch.
+
+---
+
+## Requirements
+
+- Python 3.10+
+- `openpyxl` — Excel file reading
+- `pypdf` — PDF reading and writing
+- `requests` — HTTP downloads
